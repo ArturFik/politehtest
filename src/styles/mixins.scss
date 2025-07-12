@@ -1,0 +1,34 @@
+@mixin themeBackground {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+@mixin themeBoxShadow {
+  box-shadow: var(--animated-box-shadow-init);
+  transition: background-color 0.5s ease, color 0.5s ease;
+  &:hover {
+    box-shadow: var(--animated-box-shadow-animation);
+  }
+}
+
+@mixin themeText {
+  color: var(--text-color);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+@mixin mediaPC() {
+  @media (min-width: 768px) {
+    @content;
+  }
+}
+
+@mixin themeBorder {
+  border: var(--border-grid);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+@mixin themeGrid {
+  background-color: var(--background-color-grid);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}

@@ -1,0 +1,23 @@
+@use "./mixins" as *;
+
+:root[data-theme="light"] {
+  --background-color: #ffffff;
+  --text-color: #1e1e1e;
+  --background-color-grid: #fff;
+  --row-even-bg: #ffffff;
+  --row-odd-bg: #edeafb;
+  --border-grid: 3px solid #f2f2f5;
+}
+
+:root[data-theme="dark"] {
+  --background-color: #1e1e1e;
+  --text-color: #ffffff;
+  --background-color-grid: #252525;
+  --row-odd-bg: #343339;
+  --row-even-bg: #3a3a3a;
+  --border-grid: none;
+}
+
+body {
+  @include themeBackground;
+}
