@@ -175,6 +175,7 @@
 
 .star {
   color: #d17591;
+  margin-right: 5px;
 }
 
 .modal {
@@ -204,30 +205,28 @@
     display: flex;
     flex-direction: column;
     align-items: start;
-    @include mediaPC {
-      flex-direction: row;
-    }
+    margin-bottom: 15px;
     &-checkbox-wrap {
       display: flex;
+      flex-direction: row;
       align-items: center;
-      @include mediaPC {
-        margin-top: 0;
-      }
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 400;
     }
   }
   &__expertise {
     display: flex;
     flex-direction: column;
     align-items: start;
-    @include mediaPC {
-      flex-direction: row;
-    }
     &-checkbox-wrap {
       display: flex;
       align-items: start;
       margin-top: 10px;
-      @include mediaPC {
-        margin-top: 0;
+      font-size: 14px;
+      font-weight: 400;
+      > input {
+        margin-top: 6px;
       }
     }
   }
@@ -249,7 +248,7 @@
     background-color: rgba(0, 0, 0, 0.6);
     display: block;
     position: absolute;
-    width: 200%;
+    width: 100%;
     height: 100%;
     top: 0;
     z-index: 9998;
@@ -276,7 +275,15 @@
       align-items: start;
     }
   }
-
+  &__label {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    margin: 30px 0 10px 0;
+    &--expertise {
+      margin: 10px 0 10px 0;
+    }
+  }
   &__type {
     display: flex;
     align-items: center;
@@ -309,6 +316,7 @@
     }
   }
   &__expertise {
+    margin-top: 20px;
     &--field {
       width: 100%;
       margin-bottom: 15px;
@@ -320,13 +328,10 @@
       }
     }
     &--details {
+      margin-top: 20px;
       display: grid;
-      gap: 20px;
-      grid-template-columns: repeat(4, 3fr);
-      @media (max-width: 1150px) {
-        grid-template-columns: repeat(2, 3fr);
-        gap: 10px;
-      }
+      grid-template-columns: repeat(2, 3fr);
+      gap: 10px;
       @media (max-width: 500px) {
         grid-template-columns: 1fr;
         gap: 0;
@@ -348,8 +353,8 @@
     resize: none;
     box-sizing: border-box;
     padding: 10px;
+    @include themeBackgroundInput;
     border-radius: 12px;
-    border: 0;
   }
   &__input--fullwidth {
     width: 100%;
@@ -357,6 +362,7 @@
     padding: 10px;
     border-radius: 12px;
     border: 0;
+    @include themeBackgroundInput;
   }
   &__actions {
     display: flex;
@@ -375,6 +381,90 @@
     padding: 10px;
     border-radius: 12px;
     border: 0;
+    @include themeBackgroundInput;
+    &--disabled {
+      cursor: not-allowed;
+      border-color: #ddd;
+    }
+  }
+
+  &__contact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 5px;
+    &--view {
+      display: flex;
+      flex-direction: column;
+      align-items: start;
+      margin-top: 0;
+      flex: 1;
+      min-width: 185px;
+      > input {
+        box-sizing: border-box;
+        padding: 10px;
+        border-radius: 12px;
+        border: 0;
+        @include themeBackgroundInput;
+        width: 100%;
+      }
+      > p {
+        margin: 10px 0;
+      }
+    }
+  }
+  &__checkbox {
+    margin: 0;
+    margin-right: 5px;
+  }
+  > p {
+    margin: 10px 0;
+  }
+
+  &__coauthor {
+    &--header {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0;
+      > p {
+        display: inline-flex;
+      }
+    }
+    &--btn {
+      background: none;
+      border: none;
+      color: #007bff;
+      cursor: pointer;
+      font-size: 14px;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+    &--view {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin-top: 5px;
+      flex: 1;
+      min-width: 185px;
+
+      > input {
+        box-sizing: border-box;
+        padding: 10px;
+        border-radius: 12px;
+        border: 0;
+        @include themeBackgroundInput;
+        width: 100%;
+      }
+      > p {
+        margin: 10px;
+
+        font-size: 24px;
+      }
+    }
   }
 }
 .publications-table {
@@ -582,23 +672,28 @@
 }
 
 .status {
+  display: inline-block;
+  min-width: 100%;
+  width: fit-content;
+  text-align: center;
+  padding: 5px;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 14px;
   &__pending {
     background-color: #fbefe7;
     color: #9c7c5b;
-    padding: 10px;
-    border-radius: 10px;
+    font-size: 14px;
   }
   &__approved {
     background-color: #e9f9f1;
     color: #267a51;
-    padding: 10px;
-    border-radius: 10px;
+    font-size: 14px;
   }
   &__rejected {
     background-color: #f8dddd;
     color: #7a2626;
-    padding: 10px;
-    border-radius: 10px;
+    font-size: 14px;
   }
 }
 .toggleText {

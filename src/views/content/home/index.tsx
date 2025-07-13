@@ -2,35 +2,11 @@ import { useEffect, useState } from "react";
 import styles from "./index.module.scss";
 import Info from "../../components/tooltip";
 import Select from "../../components/selector";
-
-type PublicationStatus = "pending" | "approved" | "rejected";
-
-interface Publication {
-  id: number;
-  title: string;
-  type: "scientific" | "thesis";
-  isCollectiveAuthors: boolean;
-  authors: string;
-  coauthors: string;
-  contact: string;
-  createdAt: string;
-  status: PublicationStatus;
-}
-
-interface FormData {
-  title: string;
-  type: "scientific" | "thesis";
-  isCollectiveAuthors: boolean;
-  authors: string;
-  coauthors: string;
-  contact: string;
-  noStateSecret: boolean;
-  expertNumber: string;
-  expertDate: string;
-  expertStart: string;
-  expertEnd: string;
-  createdAt: string;
-}
+import type {
+  FormData,
+  Publication,
+  PublicationStatus,
+} from "../../../services/types";
 
 export const Home = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -45,8 +21,10 @@ export const Home = () => {
     title: "",
     isCollectiveAuthors: false,
     authors: "",
-    coauthors: "",
-    contact: "",
+    coauthors: [],
+    contactName: "",
+    contactPhone: "",
+    contactEmail: "",
     noStateSecret: false,
     expertNumber: "",
     expertDate: "",
@@ -89,6 +67,29 @@ export const Home = () => {
     }));
   };
 
+  const handleAddCoauthor = () => {
+    setFormData((prev) => ({
+      ...prev,
+      coauthors: [...prev.coauthors, ""],
+    }));
+  };
+
+  const handleRemoveCoauthor = (index: number) => {
+    setFormData((prev) => {
+      const newCoauthors = [...prev.coauthors];
+      newCoauthors.splice(index, 1);
+      return { ...prev, coauthors: newCoauthors };
+    });
+  };
+
+  const handleCoauthorChange = (index: number, value: string) => {
+    setFormData((prev) => {
+      const newCoauthors = [...prev.coauthors];
+      newCoauthors[index] = value;
+      return { ...prev, coauthors: newCoauthors };
+    });
+  };
+
   type FormDataKey = keyof FormData;
 
   const validateForm = () => {
@@ -96,7 +97,9 @@ export const Home = () => {
       "type",
       "title",
       "authors",
-      "contact",
+      "contactName",
+      "contactPhone",
+      "contactEmail",
       "expertNumber",
       "expertDate",
       "expertStart",
@@ -120,14 +123,20 @@ export const Home = () => {
           errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }, 0);
-
       return;
     }
 
     setError(false);
     const newPublication: Publication = {
       id: Date.now(),
-      ...formData,
+      title: formData.title,
+      type: formData.type,
+      isCollectiveAuthors: formData.isCollectiveAuthors,
+      authors: formData.authors,
+      coauthors: formData.coauthors.join(", "),
+      contactName: formData.contactName,
+      contactPhone: formData.contactPhone,
+      contactEmail: formData.contactEmail,
       status: "pending",
       createdAt: new Date().toLocaleString("ru-RU", {
         day: "numeric",
@@ -146,8 +155,10 @@ export const Home = () => {
       title: "",
       isCollectiveAuthors: false,
       authors: "",
-      coauthors: "",
-      contact: "",
+      coauthors: [],
+      contactName: "",
+      contactPhone: "",
+      contactEmail: "",
       noStateSecret: false,
       expertNumber: "",
       expertDate: "",
@@ -160,21 +171,23 @@ export const Home = () => {
   const renderStatus = (status: PublicationStatus) => {
     switch (status) {
       case "pending":
-        return <span className={styles["status__pending"]}>Ожидает</span>;
+        return (
+          <span className={`${styles.status} ${styles.status__pending}`}>
+            Ожидает
+          </span>
+        );
       case "approved":
-        return <span className={styles["status__approved"]}>Одобрено</span>;
+        return (
+          <span className={`${styles.status} ${styles.status__approved}`}>
+            Одобрено
+          </span>
+        );
       case "rejected":
-        return <span className={styles["status__rejected"]}>Отклонено</span>;
-    }
-  };
-  const renderStatusModal = (status: PublicationStatus) => {
-    switch (status) {
-      case "pending":
-        return <span>Ожидает</span>;
-      case "approved":
-        return <span>Одобрено</span>;
-      case "rejected":
-        return <span>Отклонено</span>;
+        return (
+          <span className={`${styles.status} ${styles.status__rejected}`}>
+            Отклонено
+          </span>
+        );
     }
   };
 
@@ -191,6 +204,50 @@ export const Home = () => {
     setModalOpen(false);
   };
 
+  const changePublicationStatus = (
+    id: number,
+    newStatus: PublicationStatus
+  ) => {
+    const updatedPublications = publications.map((pub) => {
+      if (pub.id === id) {
+        return { ...pub, status: newStatus };
+      }
+      return pub;
+    });
+
+    setPublications(updatedPublications);
+    localStorage.setItem("publications", JSON.stringify(updatedPublications));
+
+    if (selectedPublication && selectedPublication.id === id) {
+      setSelectedPublication({ ...selectedPublication, status: newStatus });
+    }
+  };
+
+  const renderStatusModal = (status: PublicationStatus) => {
+    switch (status) {
+      case "pending":
+        return <span>Ожидает</span>;
+      case "approved":
+        return <span>Одобрено</span>;
+      case "rejected":
+        return <span>Отклонено</span>;
+    }
+  };
+
+  const getNextStatus = (
+    currentStatus: PublicationStatus
+  ): PublicationStatus => {
+    switch (currentStatus) {
+      case "pending":
+        return "approved";
+      case "approved":
+        return "rejected";
+      case "rejected":
+        return "pending";
+      default:
+        return "pending";
+    }
+  };
   return (
     <>
       <div className={styles["page"]}>
@@ -336,17 +393,24 @@ export const Home = () => {
                         </span>
                       </div>
 
-                      <div className={styles["publications__col--status"]}>
+                      <div
+                        className={styles["publications__col--status"]}
+                        onClick={() => {
+                          const newStatus = getNextStatus(pub.status);
+                          changePublicationStatus(pub.id, newStatus);
+                        }}
+                      >
                         {renderStatus(pub.status)}
                       </div>
 
                       <div className={styles["publications__col--coauthors"]}>
                         {pub.authors}
+                        <br />
+                        <br />
                         {pub.coauthors && (
-                          <Info
-                            color={color}
-                            tooltip={`Соавторы: ${pub.coauthors}`}
-                          />
+                          <>
+                            <strong>Соавторы:</strong> {pub.coauthors}
+                          </>
                         )}
                       </div>
                     </div>
@@ -477,8 +541,10 @@ export const Home = () => {
             </div>
 
             <div className={styles["modal__authors"]}>
-              <span className={styles["star"]}>*</span>
-              <strong>Авторы из Московского Политеха:</strong>
+              <p className={styles["modal__label"]}>
+                <span className={styles["star"]}>*</span>
+                <strong>Авторы из Московского Политеха:</strong>
+              </p>
               <span className={styles["modal__authors-checkbox-wrap"]}>
                 <input
                   className={styles["modal__checkbox"]}
@@ -498,39 +564,86 @@ export const Home = () => {
                 name="authors"
                 value={formData.authors}
                 onChange={handleInputChange}
-                placeholder="ФИО авторов через запятую"
+                placeholder="ФИО автора"
               />
             </div>
 
-            <div className={styles["modal__fullwidth-container"]}>
-              <p className={styles["modal__label"]}>
-                <strong>Соавторы:</strong>{" "}
-                <span className={styles["modal__coauthors"]}>
-                  (инициалы, фамилия, через запятую)
-                </span>
-              </p>
-              <input
-                className={styles["modal__input--fullwidth"]}
-                type="text"
-                name="coauthors"
-                value={formData.coauthors}
-                onChange={handleInputChange}
-                placeholder="ФИО соавторов из других организаций"
-              />
-            </div>
+            {formData.isCollectiveAuthors && (
+              <div className={styles["modal__fullwidth-container"]}>
+                <div className={styles["modal__coauthor--header"]}>
+                  <p>
+                    <strong>Соавторы:</strong>
+                  </p>
+                  <button
+                    type="button"
+                    className={styles["modal__coauthor--btn"]}
+                    onClick={handleAddCoauthor}
+                  >
+                    + Добавить соавтора
+                  </button>
+                </div>
+
+                {formData.coauthors.map((coauthor, index) => (
+                  <div className={styles["modal__coauthor--view"]}>
+                    <input
+                      type="text"
+                      value={coauthor}
+                      onChange={(e) =>
+                        handleCoauthorChange(index, e.target.value)
+                      }
+                      placeholder="ФИО соавтора"
+                    />
+                    <p
+                      onClick={() => handleRemoveCoauthor(index)}
+                      className={styles["modal__coauthor--remove"]}
+                    >
+                      ×
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className={styles["modal__fullwidth-container"]}>
               <p className={styles["modal__label"]}>
                 <span className={styles["star"]}>*</span>
-                <strong>Контактное лицо (ФИО, телефон, почта):</strong>
+                <strong>Контактное лицо:</strong>
               </p>
-              <textarea
-                className={styles["modal__textarea--fixed"]}
-                name="contact"
-                value={formData.contact}
-                onChange={handleInputChange}
-                placeholder="Иванов Иван Иванович, +7(999)123-45-67, ivanov@mospolytech.ru"
-              ></textarea>
+              <div className={styles["modal__contact"]}>
+                <div className={styles["modal__contact--view"]}>
+                  <p>
+                    <strong>ФИО:</strong>
+                  </p>
+                  <input
+                    name="contactName"
+                    value={formData.contactName}
+                    onChange={handleInputChange}
+                    placeholder="Иванов Иван Иванович"
+                  />
+                </div>
+                <div className={styles["modal__contact--view"]}>
+                  <p>
+                    <strong>Телефон:</strong>
+                  </p>
+                  <input
+                    name="contactPhone"
+                    value={formData.contactPhone}
+                    onChange={handleInputChange}
+                    placeholder="+7(999)123-45-67"
+                  />
+                </div>
+                <div className={styles["modal__contact--view"]}>
+                  <p>
+                    <strong>Почта:</strong>
+                  </p>
+                  <input
+                    name="contactEmail"
+                    value={formData.contactEmail}
+                    onChange={handleInputChange}
+                    placeholder="ivanov@mospolytech.ru"
+                  />
+                </div>
+              </div>
             </div>
 
             <hr className={styles["modal__separator"]} />
@@ -555,7 +668,7 @@ export const Home = () => {
 
             <div className={styles["modal__expertise--details"]}>
               <div className={styles["modal__expertise--field"]}>
-                <p className={styles["modal__label"]}>
+                <p className={styles["modal__label--expertise"]}>
                   <span className={styles["star"]}>*</span>
                   <strong>Номер заключения:</strong>
                 </p>
@@ -568,7 +681,7 @@ export const Home = () => {
                 />
               </div>
               <div className={styles["modal__expertise--field"]}>
-                <p className={styles["modal__label"]}>
+                <p className={styles["modal__label--expertise"]}>
                   <span className={styles["star"]}>*</span>
                   <strong>Дата заключения:</strong>
                 </p>
@@ -581,7 +694,7 @@ export const Home = () => {
                 />
               </div>
               <div className={styles["modal__expertise--field"]}>
-                <p className={styles["modal__label"]}>
+                <p className={styles["modal__label--expertise"]}>
                   <span className={styles["star"]}>*</span>
                   <strong>Начало экспертизы:</strong>
                 </p>
@@ -594,7 +707,7 @@ export const Home = () => {
                 />
               </div>
               <div className={styles["modal__expertise--field"]}>
-                <p className={styles["modal__label"]}>
+                <p className={styles["modal__label--expertise"]}>
                   <span className={styles["star"]}>*</span>
                   <strong>Окончание экспертизы:</strong>
                 </p>

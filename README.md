@@ -6,6 +6,7 @@ npm install
 # или
 yarn install
 ```
+
 ```bash
 # Запуск dev-сервера
 npm run dev

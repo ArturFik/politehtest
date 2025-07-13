@@ -4,6 +4,13 @@
   transition: background-color 0.5s ease, color 0.5s ease;
 }
 
+@mixin themeBackgroundInput {
+  background-color: var(--background-input);
+  border: var(--border-input);
+  color: var(--text-color);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
 @mixin themeBoxShadow {
   box-shadow: var(--animated-box-shadow-init);
   transition: background-color 0.5s ease, color 0.5s ease;
