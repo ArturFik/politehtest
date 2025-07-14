@@ -6,7 +6,15 @@ import type {
   FormData,
   Publication,
   PublicationStatus,
+  PublicationType,
 } from "../../../services/types";
+import {
+  selector_api,
+  getPublications,
+  createPublication,
+  updatePublicationStatus,
+} from "../../../services/apiService";
+import StringDatePicker from "../../components/datapicker";
 
 export const Home = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -14,10 +22,13 @@ export const Home = () => {
   const [logo, setLogo] = useState("logo-black.png");
   const [color, setColor] = useState<string>("#1e1e1e");
   const [publications, setPublications] = useState<Publication[]>([]);
+  const [publicationTypes, setPublicationTypes] = useState<PublicationType[]>(
+    []
+  );
   const [isListVisible, setIsListVisible] = useState(false);
   const [error, setError] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    type: "scientific",
+    type: "",
     title: "",
     isCollectiveAuthors: false,
     authors: "",
@@ -38,14 +49,23 @@ export const Home = () => {
     setLogo(theme === "light" ? "logo-black.png" : "logo-white.png");
     setColor(theme === "light" ? "#1e1e1e" : "#fff");
 
-    const savedPublications = localStorage.getItem("publications");
-    if (savedPublications) {
+    const fetchData = async () => {
       try {
-        setPublications(JSON.parse(savedPublications));
-      } catch (e) {
-        console.error("Ошибка загрузки публикаций:", e);
+        const [types, pubs] = await Promise.all([
+          selector_api(),
+          getPublications(),
+        ]);
+        setPublicationTypes(types);
+        setPublications(pubs);
+        if (types.length > 0) {
+          setFormData((prev) => ({ ...prev, type: types[0].name }));
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
       }
-    }
+    };
+
+    fetchData();
   }, [theme]);
 
   const toggleTheme = () => {
@@ -112,7 +132,7 @@ export const Home = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       setError(true);
       setTimeout(() => {
@@ -127,45 +147,30 @@ export const Home = () => {
     }
 
     setError(false);
-    const newPublication: Publication = {
-      id: Date.now(),
-      title: formData.title,
-      type: formData.type,
-      isCollectiveAuthors: formData.isCollectiveAuthors,
-      authors: formData.authors,
-      coauthors: formData.coauthors.join(", "),
-      contactName: formData.contactName,
-      contactPhone: formData.contactPhone,
-      contactEmail: formData.contactEmail,
-      status: "pending",
-      createdAt: new Date().toLocaleString("ru-RU", {
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
-      }),
-    };
+    try {
+      const newPublication = await createPublication(formData);
+      setPublications([...publications, newPublication]);
+      setModal(false);
 
-    const updatedPublications = [...publications, newPublication];
-    setPublications(updatedPublications);
-    localStorage.setItem("publications", JSON.stringify(updatedPublications));
-    setModal(false);
-
-    setFormData({
-      type: "scientific",
-      title: "",
-      isCollectiveAuthors: false,
-      authors: "",
-      coauthors: [],
-      contactName: "",
-      contactPhone: "",
-      contactEmail: "",
-      noStateSecret: false,
-      expertNumber: "",
-      expertDate: "",
-      expertStart: "",
-      expertEnd: "",
-      createdAt: "",
-    });
+      setFormData({
+        type: publicationTypes.length > 0 ? publicationTypes[0].name : "",
+        title: "",
+        isCollectiveAuthors: false,
+        authors: "",
+        coauthors: [],
+        contactName: "",
+        contactPhone: "",
+        contactEmail: "",
+        noStateSecret: false,
+        expertNumber: "",
+        expertDate: "",
+        expertStart: "",
+        expertEnd: "",
+        createdAt: "",
+      });
+    } catch (error) {
+      console.error("Error saving publication:", error);
+    }
   };
 
   const renderStatus = (status: PublicationStatus) => {
@@ -204,22 +209,21 @@ export const Home = () => {
     setModalOpen(false);
   };
 
-  const changePublicationStatus = (
-    id: number,
+  const changePublicationStatus = async (
+    id: string,
     newStatus: PublicationStatus
   ) => {
-    const updatedPublications = publications.map((pub) => {
-      if (pub.id === id) {
-        return { ...pub, status: newStatus };
+    try {
+      const updatedPub = await updatePublicationStatus(id, newStatus);
+      setPublications(
+        publications.map((pub) => (pub.id === id ? updatedPub : pub))
+      );
+
+      if (selectedPublication && selectedPublication.id === id) {
+        setSelectedPublication(updatedPub);
       }
-      return pub;
-    });
-
-    setPublications(updatedPublications);
-    localStorage.setItem("publications", JSON.stringify(updatedPublications));
-
-    if (selectedPublication && selectedPublication.id === id) {
-      setSelectedPublication({ ...selectedPublication, status: newStatus });
+    } catch (error) {
+      console.error("Error updating publication status:", error);
     }
   };
 
@@ -248,6 +252,7 @@ export const Home = () => {
         return "pending";
     }
   };
+
   return (
     <>
       <div className={styles["page"]}>
@@ -378,9 +383,8 @@ export const Home = () => {
                       onKeyDown={(e) => e.key === "Enter" && openModal(pub)}
                     >
                       <div className={styles["publications__col--type"]}>
-                        {pub.type === "scientific"
-                          ? "Научная статья"
-                          : "Тезисы доклада"}
+                        {publicationTypes.find((t) => t.name === pub.type)
+                          ?.name || pub.type}
                       </div>
 
                       <div className={styles["publications__col--title"]}>
@@ -397,7 +401,7 @@ export const Home = () => {
                         className={styles["publications__col--status"]}
                         onClick={() => {
                           const newStatus = getNextStatus(pub.status);
-                          changePublicationStatus(pub.id, newStatus);
+                          changePublicationStatus(pub.id.toString(), newStatus);
                         }}
                       >
                         {renderStatus(pub.status)}
@@ -518,13 +522,10 @@ export const Home = () => {
               value={formData.type}
               required={true}
               onChange={handleInputChange}
-              options={[
-                { value: "scientific", label: "Научная статья" },
-                {
-                  value: "thesis",
-                  label: "Тезисы доклада",
-                },
-              ]}
+              options={publicationTypes.map((type) => ({
+                value: type.name,
+                label: type.name,
+              }))}
             />
 
             <div className={styles["modal__fullwidth-container"]}>
@@ -685,38 +686,52 @@ export const Home = () => {
                   <span className={styles["star"]}>*</span>
                   <strong>Дата заключения:</strong>
                 </p>
-                <input
+                <StringDatePicker
+                  selected={formData.expertDate}
+                  onChange={(dateString) =>
+                    setFormData({ ...formData, expertDate: dateString })
+                  }
+                  placeholderText="Выберите дату"
                   className={styles["modal__input"]}
-                  type="text"
-                  name="expertDate"
-                  value={formData.expertDate}
-                  onChange={handleInputChange}
+                  required
+                  showYearDropdown
+                  dropdownMode="select"
                 />
               </div>
+
               <div className={styles["modal__expertise--field"]}>
                 <p className={styles["modal__label--expertise"]}>
                   <span className={styles["star"]}>*</span>
                   <strong>Начало экспертизы:</strong>
                 </p>
-                <input
+                <StringDatePicker
+                  selected={formData.expertStart}
+                  onChange={(dateString) =>
+                    setFormData({ ...formData, expertStart: dateString })
+                  }
+                  placeholderText="Выберите дату"
                   className={styles["modal__input"]}
-                  type="text"
-                  name="expertStart"
-                  value={formData.expertStart}
-                  onChange={handleInputChange}
+                  required
+                  showYearDropdown
+                  dropdownMode="select"
                 />
               </div>
+
               <div className={styles["modal__expertise--field"]}>
                 <p className={styles["modal__label--expertise"]}>
                   <span className={styles["star"]}>*</span>
                   <strong>Окончание экспертизы:</strong>
                 </p>
-                <input
+                <StringDatePicker
+                  selected={formData.expertEnd}
+                  onChange={(dateString) =>
+                    setFormData({ ...formData, expertEnd: dateString })
+                  }
+                  placeholderText="Выберите дату"
                   className={styles["modal__input"]}
-                  type="text"
-                  name="expertEnd"
-                  value={formData.expertEnd}
-                  onChange={handleInputChange}
+                  required
+                  showYearDropdown
+                  dropdownMode="select"
                 />
               </div>
             </div>

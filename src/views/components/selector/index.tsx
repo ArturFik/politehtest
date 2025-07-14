@@ -1,14 +1,6 @@
 import React from "react";
 import styles from "./index.module.scss";
-
-interface SelectProps {
-  label: string;
-  name: string;
-  value: string;
-  options: { value: string; label: string }[];
-  required?: boolean;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-}
+import type { SelectProps } from "../../../services/types";
 
 const Select: React.FC<SelectProps> = ({ name, value, options, onChange }) => {
   return (
