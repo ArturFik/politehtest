@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
 import Info from "../../components/tooltip";
 import Select from "../../components/selector";
@@ -44,6 +44,15 @@ export const Home = () => {
     createdAt: "",
   });
 
+  const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc" | null>(
+    null
+  );
+  const [statusSortOrder, setStatusSortOrder] = useState<"asc" | "desc" | null>(
+    null
+  );
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     setLogo(theme === "light" ? "logo-black.png" : "logo-white.png");
@@ -59,6 +68,7 @@ export const Home = () => {
         setPublications(pubs);
         if (types.length > 0) {
           setFormData((prev) => ({ ...prev, type: types[0].name }));
+          setSelectedTypes(types.map((type: PublicationType) => type.name));
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -67,6 +77,69 @@ export const Home = () => {
 
     fetchData();
   }, [theme]);
+
+  const toggleDateSort = () => {
+    if (dateSortOrder === null) {
+      setDateSortOrder("desc");
+    } else {
+      setDateSortOrder(dateSortOrder === "asc" ? "desc" : "asc");
+    }
+    setStatusSortOrder(null);
+  };
+
+  const toggleStatusSort = () => {
+    if (statusSortOrder === null) {
+      setStatusSortOrder("asc");
+    } else {
+      setStatusSortOrder(statusSortOrder === "asc" ? "desc" : "asc");
+    }
+    setDateSortOrder(null);
+  };
+
+  const toggleTypeSelector = () => {
+    setShowTypeSelector((prev) => !prev);
+  };
+
+  const handleTypeSelection = (type: string) => {
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const filteredPublications = useMemo(() => {
+    let result = [...publications];
+
+    if (selectedTypes.length > 0) {
+      result = result.filter((pub) => selectedTypes.includes(pub.type));
+    }
+
+    if (dateSortOrder) {
+      result.sort((a, b) => {
+        const [dayA, monthA, yearA] = a.createdAt.split(".").map(Number);
+        const [dayB, monthB, yearB] = b.createdAt.split(".").map(Number);
+        const dateA = new Date(yearA, monthA - 1, dayA).getTime();
+        const dateB = new Date(yearB, monthB - 1, dayB).getTime();
+        return dateSortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    }
+    if (statusSortOrder) {
+      const statusOrder: Record<PublicationStatus, number> = {
+        pending: 1,
+        approved: 2,
+        rejected: 3,
+      };
+
+      result.sort((a, b) => {
+        const aStatus = statusOrder[a.status];
+        const bStatus = statusOrder[b.status];
+        return statusSortOrder === "asc"
+          ? aStatus - bStatus
+          : bStatus - aStatus;
+      });
+    }
+
+    return result;
+  }, [publications, dateSortOrder, statusSortOrder, selectedTypes]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
@@ -359,21 +432,65 @@ export const Home = () => {
               <div className={styles["publications-scroll-container"]}>
                 <div className={styles["publications-content"]}>
                   <div className={styles["publications-header"]}>
-                    <div className={styles["publications__col--type"]}>Тип</div>
+                    <div
+                      className={styles["publications__col--type"]}
+                      onClick={toggleTypeSelector}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Тип {showTypeSelector ? "▲" : "▼"}
+                      {showTypeSelector && (
+                        <div className={styles["publications__type--selector"]}>
+                          {publicationTypes.map((type) => (
+                            <div
+                              key={type.name}
+                              className={styles["publications__type--option"]}
+                            >
+                              <input
+                                type="checkbox"
+                                id={`type-${type.name}`}
+                                checked={selectedTypes.includes(type.name)}
+                                onChange={() => handleTypeSelection(type.name)}
+                              />
+                              <label htmlFor={`type-${type.name}`}>
+                                {type.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className={styles["publications__col--title"]}>
                       Название
                     </div>
-                    <div className={styles["publications__col--date"]}>
-                      Дата
+                    <div
+                      className={styles["publications__col--date"]}
+                      onClick={toggleDateSort}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Дата{" "}
+                      {dateSortOrder === "asc"
+                        ? "▲"
+                        : dateSortOrder === "desc"
+                        ? "▼"
+                        : "▼"}
                     </div>
-                    <div className={styles["publications__col--status"]}>
-                      Статус
+                    <div
+                      className={styles["publications__col--status"]}
+                      onClick={toggleStatusSort}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Статус{" "}
+                      {statusSortOrder === "asc"
+                        ? "▲"
+                        : statusSortOrder === "desc"
+                        ? "▼"
+                        : "▼"}
                     </div>
                     <div className={styles["publications__col--coauthors"]}>
                       Авторы
                     </div>
                   </div>
-                  {publications.map((pub: Publication) => (
+                  {filteredPublications.map((pub: Publication) => (
                     <div
                       key={pub.id}
                       className={styles["publications-row"]}
@@ -399,7 +516,8 @@ export const Home = () => {
 
                       <div
                         className={styles["publications__col--status"]}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           const newStatus = getNextStatus(pub.status);
                           changePublicationStatus(pub.id.toString(), newStatus);
                         }}

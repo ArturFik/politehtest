@@ -731,3 +731,29 @@
   text-align: center;
   font-weight: 500;
 }
+
+.publications__type {
+  &--selector {
+    position: absolute;
+    @include themeBackground;
+    padding: 10px;
+    z-index: 1000;
+    margin-top: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  &--option {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+
+    input {
+      margin-right: 8px;
+    }
+
+    label {
+      cursor: pointer;
+    }
+  }
+}
